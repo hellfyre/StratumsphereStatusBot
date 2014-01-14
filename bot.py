@@ -10,9 +10,6 @@ class StratumsphereStatusBot(irc.bot.SingleServerIRCBot):
     def __init__(self, channel):
         irc.bot.SingleServerIRCBot.__init__(self, [('chat.freenode.net', 6667)], 'fyrebot', 'fyrebot2.0')
         self.channel = channel
-        self.guardian = dict()
-        self.guardian['present'] = False
-        self.guardian['name'] = 'StratumGuardian'
 
     def on_nicknameinuse(self, c, e):
         c.nick(c.get_nickname() + 'I')
@@ -21,16 +18,8 @@ class StratumsphereStatusBot(irc.bot.SingleServerIRCBot):
         c.join(self.channel)
 
     def on_join(self, c, e):
-        if irc.strings.lower(self.guardian['name']) in irc.strings.lower(e.source.nick):
-            print 'Guardian joined'
-            self.guardian['present'] = True
-        elif irc.strings.lower(e.source.nick) == irc.strings.lower(c.get_nickname()):
+        if irc.strings.lower(e.source.nick) == irc.strings.lower(c.get_nickname()):
             print 'Joined ' + e.target
-
-    def on_quit(self, c, e):
-        if irc.strings.lower(self.guardian['name']) in irc.strings.lower(e.source.nick):
-            print 'Guardian quit'
-            self.guardian['present'] = False
 
     def on_currenttopic(self, c, e):
         self.topic = e.arguments[1].split(' || ')
@@ -40,18 +29,8 @@ class StratumsphereStatusBot(irc.bot.SingleServerIRCBot):
         self.topic = e.arguments[0].split(' || ')
         status.parse_and_update(e.arguments[0])
 
-    def on_namreply(self, c, e):
-        names = e.arguments[2].split(' ')
-        for name in names:
-            if irc.strings.lower(self.guardian['name']) in irc.strings.lower(name):
-                self.guardian['present'] = True
-        if self.guardian['present']:
-            print 'Guardian is present'
-        else:
-            print 'Guardian is absent'
-
     def on_pubmsg(self, c, e):
-        if e.arguments[0].startswith('sudo ') and not self.guardian['present']:
+        if e.arguments[0].startswith('sudo ') and not self.is_guardian_present():
             self.do_sudo_command(e, e.arguments[0].replace('sudo ', ''))
         # else:
         #     parts = e.arguments[0].split(':',1)
@@ -61,6 +40,12 @@ class StratumsphereStatusBot(irc.bot.SingleServerIRCBot):
 
     def on_privmsg(self, c, e):
         c.privmsg(self.channel, 'I\'m being harassed by ' + e.source.nick)
+
+    def is_guardian_present(self):
+        for ch in self.channels.values():
+                if ch.has_user('StratumGuardian') or ch.has_user('StratumGuardian`'):
+                    return True
+        return False
 
     def do_sudo_command(self, e, command):
         if command == 'open':
@@ -74,7 +59,7 @@ class StratumsphereStatusBot(irc.bot.SingleServerIRCBot):
     #     pass
 
     def send_status(self):
-        if self.guardian['present']:
+        if self.is_guardian_present():
             self.connection.privmsg(self.channel, status.compose_openclose_msg())
         else:
             new_topic = []
