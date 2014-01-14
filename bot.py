@@ -95,6 +95,7 @@ class StratumsphereStatusBot(irc.bot.SingleServerIRCBot):
 def main():
     try:
         bot = StratumsphereStatusBot('#stratum0')
+        bot.connection.buffer_class.errors = 'replace'
         callbacks['send_status'] = bot.send_status
         jsonserver = JsonServer(('134.169.175.96', 8766))
 
